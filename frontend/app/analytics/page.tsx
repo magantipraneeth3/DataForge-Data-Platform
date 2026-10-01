@@ -108,6 +108,7 @@ type DatasetAnalysis = {
 
 function DatasetAnalysisSelector() {
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
+  const [datasetSearch, setDatasetSearch] = useState("");
   const [entryId, setEntryId] = useState("");
   const [idType, setIdType] = useState<AnalyticsIdType>("dataset");
   const [analysis, setAnalysis] = useState<DatasetAnalysis | null>(null);
@@ -211,6 +212,11 @@ function DatasetAnalysisSelector() {
   }, []);
 
   const selectedDatasetId = entryId;
+  const filteredDatasets = datasets.filter((dataset) =>
+    `${dataset.name} ${dataset.id}`
+      .toLowerCase()
+      .includes(datasetSearch.trim().toLowerCase())
+  );
   const currentOffset = analysis?.analytics.offset ?? 0;
   const showingFrom = analysis?.analytics.total_rows ? currentOffset + 1 : 0;
   const showingTo = Math.min(
@@ -228,31 +234,6 @@ function DatasetAnalysisSelector() {
           void analyzeIdentifier(idType, selectedDatasetId);
         }}
       >
-        <label className="sr-only" htmlFor="analytics-dataset-select">
-          Select a dataset
-        </label>
-        <select
-          id="analytics-dataset-select"
-          value={idType === "dataset" && datasets.some((dataset) => dataset.id === selectedDatasetId) ? selectedDatasetId : ""}
-          onChange={(event) => {
-            const id = event.target.value;
-            setIdType("dataset");
-            setEntryId(id);
-            setAnalysis(null);
-            setError("");
-          }}
-          disabled={loadingDatasets || datasets.length === 0}
-          className="min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white disabled:opacity-60"
-        >
-          <option value="">
-            {loadingDatasets ? "Loading datasets..." : "Choose a dataset"}
-          </option>
-          {datasets.map((dataset) => (
-            <option key={dataset.id} value={dataset.id}>
-              {dataset.name}
-            </option>
-          ))}
-        </select>
         <div className="flex rounded-lg border border-slate-700 bg-slate-950 p-1" role="group" aria-label="ID type">
           <button
             type="button"
@@ -301,6 +282,68 @@ function DatasetAnalysisSelector() {
           {analyzing ? "Updating..." : analysis ? "Update analytics" : "Analyze"}
         </button>
       </form>
+
+      {idType === "dataset" && (
+        <section className="mt-5" aria-label="Available datasets">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-200">
+                Datasets ({datasets.length})
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Select a dataset to load its analytics.
+              </p>
+            </div>
+            <label className="w-full sm:max-w-sm">
+              <span className="sr-only">Search datasets</span>
+              <input
+                type="search"
+                value={datasetSearch}
+                onChange={(event) => setDatasetSearch(event.target.value)}
+                placeholder="Search by name or ID"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+              />
+            </label>
+          </div>
+          <div
+            role="listbox"
+            aria-label="Datasets"
+            className="mt-3 max-h-64 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950"
+          >
+            {loadingDatasets ? (
+              <p className="p-4 text-sm text-slate-400">Loading datasets...</p>
+            ) : filteredDatasets.length ? (
+              filteredDatasets.map((dataset) => {
+                const selected = idType === "dataset" && selectedDatasetId === dataset.id;
+                return (
+                  <button
+                    key={dataset.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      setIdType("dataset");
+                      setEntryId(dataset.id);
+                      setError("");
+                      void analyzeIdentifier("dataset", dataset.id);
+                    }}
+                    className={`flex w-full flex-col gap-1 border-b border-slate-800 px-4 py-3 text-left last:border-b-0 hover:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between ${selected ? "bg-slate-800/70" : ""}`}
+                  >
+                    <span className="font-medium text-slate-200">{dataset.name}</span>
+                    <span className="break-all font-mono text-xs text-slate-500">
+                      {dataset.id}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <p className="p-4 text-sm text-slate-400">
+                {datasets.length ? "No datasets match that search." : "No datasets are available for this role."}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-400">
