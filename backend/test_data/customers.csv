@@ -1,0 +1,6 @@
+customer_id,age,monthly_charges,tenure,churn
+C001,25,59.99,12,No
+C002,34,79.50,24,No
+C003,45,99.99,36,Yes
+C004,29,65.25,8,No
+C005,52,120.00,48,Yes
